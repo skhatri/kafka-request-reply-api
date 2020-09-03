@@ -1,0 +1,114 @@
+version: "3.7"
+volumes:
+  grafana: {}
+services:
+
+  zookeeper-0:
+    container_name: zookeeper-0
+    image: confluentinc/cp-zookeeper:5.5.1
+    ports:
+    - 2181:2181
+    - 2888:2888
+    - 3888:3888
+    expose:
+      - 2181
+      - 2888
+      - 3888
+    networks:
+      kafka:
+        aliases:
+          - zookeeper-0
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+    volumes:
+    - $HOME/data/zookeeper/zookeeper-0/data:/var/lib/zookeeper/data
+    - $HOME/data/zookeeper/zookeeper-0/log:/var/lib/zookeeper/log
+
+  #https://docs.confluent.io/current/kafka/multi-node.html
+  kafka-0:
+    container_name: kafka-0
+    image: confluentinc/cp-kafka:5.5.1
+    ports:
+      - 9092:9092
+    environment:
+      - KAFKA_BROKER_ID=0
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper-0:2181
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka-0:19092,LISTENER_PUBLIC://kafka-0:9092
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka-0:19092,LISTENER_PUBLIC://kafka-0:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT,LISTENER_PUBLIC:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+
+    volumes:
+    - $HOME/data/kafka/kafka-0/data:/var/lib/kafka/data
+    - $HOME/data/kafka/kafka-0/etc/server.properties:/etc/kafka/server.properties
+    networks:
+      kafka:
+        aliases:
+          - kafka-0
+    depends_on:
+      - zookeeper-0
+
+  kafka-1:
+    container_name: kafka-1
+    image: confluentinc/cp-kafka:5.5.1
+    ports:
+      - 9093:9093
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper-0:2181
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka-1:19093,LISTENER_PUBLIC://kafka-1:9093
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka-1:19093,LISTENER_PUBLIC://kafka-1:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT,LISTENER_PUBLIC:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+
+    volumes:
+      - $HOME/data/kafka/kafka-1/data:/var/lib/kafka/data
+      - $HOME/data/kafka/kafka-1/etc/server.properties:/etc/kafka/server.properties
+    networks:
+      kafka:
+        aliases:
+          - kafka-1
+    depends_on:
+      - zookeeper-0
+
+  kafka-2:
+    container_name: kafka-2
+    image: confluentinc/cp-kafka:5.5.1
+    ports:
+      - 9094:9094
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper-0:2181
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka-2:19094,LISTENER_PUBLIC://kafka-2:9094
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka-2:19094,LISTENER_PUBLIC://kafka-2:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT,LISTENER_PUBLIC:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+
+    volumes:
+      - $HOME/data/kafka/kafka-2/data:/var/lib/kafka/data
+      - $HOME/data/kafka/kafka-2/etc/server.properties:/etc/kafka/server.properties
+    networks:
+      kafka:
+        aliases:
+          - kafka-2
+    depends_on:
+      - zookeeper-0
+
+  kafka-cli:
+    container_name: kafka-cli
+    image: confluentinc/cp-kafka:5.5.1
+    command:
+      - /bin/bash
+      - -c
+      - "while true; do echo sleep; sleep 4h; done"
+    depends_on:
+      - zookeeper-0
+
+#  ksqldb-server:
+#    image: confluentinc/ksqldb-server:0.11
+#
+#  ksqldb-cli:
+#    image: confluentinc/ksqldb-cli:0.11
+
+networks:
+  kafka: {}
